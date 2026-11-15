@@ -9,12 +9,21 @@ env/
 # Data (DVC will track this, not Git)
 data/raw/*
 data/processed/*
+
+# Allow DVC tracking files
+!data/raw/*.dvc
+!data/processed/*.dvc
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+
 
 # Models
 models/*
 !models/.gitkeep
+
+# HuggingFace Cache
+data/hf_cache/
+
 
 # MLflow
 mlruns/
