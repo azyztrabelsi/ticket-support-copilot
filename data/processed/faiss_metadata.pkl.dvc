@@ -1,0 +1,5 @@
+outs:
+- md5: 511610082ec17674de2a6f197afaf87f
+  size: 18917539
+  hash: md5
+  path: faiss_metadata.pkl

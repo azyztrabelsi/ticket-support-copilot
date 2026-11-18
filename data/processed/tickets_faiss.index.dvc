@@ -1,0 +1,5 @@
+outs:
+- md5: 2a546c411eb46f1817a03970fbbea3bb
+  size: 41275437
+  hash: md5
+  path: tickets_faiss.index
