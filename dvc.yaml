@@ -1,0 +1,35 @@
+stages:
+  prepare_data:
+    cmd: python -m src.data.merge
+    deps:
+      - src/data/load.py
+      - src/data/merge.py
+    outs:
+      - data/processed/tickets.parquet
+      - data/processed/incidents.csv
+
+  train_baseline:
+    cmd: python -m src.classification.baseline
+    deps:
+      - data/processed/tickets.parquet
+      - src/classification/baseline.py
+    outs:
+      - models/baseline_logreg.pkl
+      - models/tfidf_vectorizer.pkl
+
+  build_rag_index:
+    cmd: python -m src.rag.index
+    deps:
+      - data/processed/tickets.parquet
+      - src/rag/index.py
+    outs:
+      - data/processed/tickets_faiss.index
+      - data/processed/faiss_metadata.pkl
+
+  monitor_drift:
+    cmd: python -m src.monitoring.drift
+    deps:
+      - data/processed/tickets.parquet
+      - src/monitoring/drift.py
+    outs:
+      - reports/data_drift_report.html

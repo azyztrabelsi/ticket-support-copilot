@@ -1,0 +1,78 @@
+schema: '2.0'
+stages:
+  prepare_data:
+    cmd: python -m src.data.merge
+    deps:
+    - path: src/data/load.py
+      hash: md5
+      md5: dfd426a697181eb6b9d18e66cd252104
+      size: 493
+    - path: src/data/merge.py
+      hash: md5
+      md5: 4ebf1eb3f57b523bbe153e32cc62775d
+      size: 4176
+    outs:
+    - path: data/processed/incidents.csv
+      hash: md5
+      md5: 4bda3137ca1b2490a20fac0ae75e39da
+      size: 221
+    - path: data/processed/tickets.parquet
+      hash: md5
+      md5: 6838ab5fe514c7f03282ab7c7c715ea9
+      size: 6965233
+  train_baseline:
+    cmd: python -m src.classification.baseline
+    deps:
+    - path: data/processed/tickets.parquet
+      hash: md5
+      md5: 6838ab5fe514c7f03282ab7c7c715ea9
+      size: 6965233
+    - path: src/classification/baseline.py
+      hash: md5
+      md5: cfaa050ae47d1da94177dbbf9be1c174
+      size: 3225
+    outs:
+    - path: models/baseline_logreg.pkl
+      hash: md5
+      md5: 24502df2374e036dea958d164eb411e5
+      size: 2161711
+    - path: models/tfidf_vectorizer.pkl
+      hash: md5
+      md5: 7fe2d3bbdcf33733095fc22ccce61fb0
+      size: 410872
+  build_rag_index:
+    cmd: python -m src.rag.index
+    deps:
+    - path: data/processed/tickets.parquet
+      hash: md5
+      md5: 6838ab5fe514c7f03282ab7c7c715ea9
+      size: 6965233
+    - path: src/rag/index.py
+      hash: md5
+      md5: 558823487a155234032da96412635410
+      size: 1993
+    outs:
+    - path: data/processed/faiss_metadata.pkl
+      hash: md5
+      md5: bae8f9f79caff22ce1496c072aae4d46
+      size: 18820373
+    - path: data/processed/tickets_faiss.index
+      hash: md5
+      md5: 2a546c411eb46f1817a03970fbbea3bb
+      size: 41275437
+  monitor_drift:
+    cmd: python -m src.monitoring.drift
+    deps:
+    - path: data/processed/tickets.parquet
+      hash: md5
+      md5: 6838ab5fe514c7f03282ab7c7c715ea9
+      size: 6965233
+    - path: src/monitoring/drift.py
+      hash: md5
+      md5: c77973dc81a139cf716e2e7d1599f381
+      size: 3865
+    outs:
+    - path: reports/data_drift_report.html
+      hash: md5
+      md5: ce6962e6b55283dc2536fa7a83d1d623
+      size: 1227
