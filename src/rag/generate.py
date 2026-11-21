@@ -49,7 +49,7 @@ class RAGGenerator:
         response = self.client.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=messages,
-            max_tokens=800,  # Increased from 300 (see note below)
+            max_tokens=800,
             temperature=0.3
         )       
         
@@ -59,10 +59,26 @@ class RAGGenerator:
         latency = time.time() - start_time
         sources = [res['ticket_id'] for res in retrieved]
         
+        # --- NEW: RAG GROUNDING METRICS & FAQ GAP DETECTION ---
+        # Calculate average retrieval distance to see if the FAISS search actually found good matches
+        avg_distance = sum([res['distance'] for res in retrieved]) / len(retrieved) if retrieved else 0
+        # If the distance is above a threshold (e.g., 1.0), the question is likely "uncovered"
+        is_unanchored = avg_distance > 1.0 
+        
+        faq_suggestion = None
+        if is_unanchored:
+            print(f"⚠️ WARNING: Uncovered Question detected! Suggesting new FAQ article for: '{new_ticket_text}'")
+            faq_suggestion = f"Create new FAQ for: {new_ticket_text}"
+            
         return {
             "suggested_response": generated_text.strip(),
             "sources": sources,
-            "latency_seconds": round(latency, 2)
+            "latency_seconds": round(latency, 2),
+            "grounding_metrics": {
+                "avg_retrieval_distance": round(avg_distance, 4),
+                "unanchored_response": is_unanchored,
+                "faq_suggestion": faq_suggestion
+            }
         }
 
 if __name__ == "__main__":
@@ -80,3 +96,4 @@ if __name__ == "__main__":
     print("\n" + "-"*50)
     print(f"SOURCES CITED (Ticket IDs): {result['sources']}")
     print(f"LATENCY: {result['latency_seconds']} seconds")
+    print(f"GROUNDING METRICS: {result['grounding_metrics']}")
