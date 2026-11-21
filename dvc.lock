@@ -76,3 +76,19 @@ stages:
       hash: md5
       md5: ce6962e6b55283dc2536fa7a83d1d623
       size: 1227
+  generate_dashboard:
+    cmd: python -m src.monitoring.dashboard
+    deps:
+    - path: data/processed/tickets.parquet
+      hash: md5
+      md5: 6838ab5fe514c7f03282ab7c7c715ea9
+      size: 6965233
+    - path: src/monitoring/dashboard.py
+      hash: md5
+      md5: 1f3506921d9af1ffc2ea9a09a7a49014
+      size: 3233
+    outs:
+    - path: reports/grafana_dashboard.html
+      hash: md5
+      md5: 765d157d8d1e6e4cbdb3780a0c2477e2
+      size: 4569297

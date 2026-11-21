@@ -33,3 +33,11 @@ stages:
       - src/monitoring/drift.py
     outs:
       - reports/data_drift_report.html
+
+  generate_dashboard:
+    cmd: python -m src.monitoring.dashboard
+    deps:
+      - data/processed/tickets.parquet
+      - src/monitoring/dashboard.py
+    outs:
+      - reports/grafana_dashboard.html

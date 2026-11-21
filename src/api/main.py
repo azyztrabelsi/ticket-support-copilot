@@ -84,3 +84,26 @@ def get_anomalies():
         return df.to_dict(orient="records")
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="No anomaly reports found.")
+
+# Add this at the very bottom of src/api/main.py
+import csv
+from datetime import datetime
+
+class FeedbackRequest(BaseModel):
+    ticket_text: str
+    predicted_intent: str
+    correct_intent: str
+
+@app.post("/feedback")
+def submit_feedback(feedback: FeedbackRequest):
+    # In a real app, this saves to a database. We will save to a CSV.
+    file_path = "data/processed/human_feedback.csv"
+    file_exists = os.path.isfile(file_path)
+    
+    with open(file_path, mode='a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["timestamp", "ticket_text", "predicted_intent", "correct_intent"])
+        writer.writerow([datetime.now(), feedback.ticket_text, feedback.predicted_intent, feedback.correct_intent])
+        
+    return {"status": "success", "message": "Feedback saved. Will be used for next retraining."}    
