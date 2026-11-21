@@ -4,6 +4,9 @@ import pandas as pd
 import joblib
 import torch
 import os
+import csv
+import re
+from datetime import datetime
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
 from src.rag.generate import RAGGenerator
 
@@ -12,6 +15,11 @@ app = FastAPI(title="Ticket Triage & Copilot API")
 # --- Pydantic Models for Request Bodies ---
 class TicketRequest(BaseModel):
     text: str
+
+class FeedbackRequest(BaseModel):
+    ticket_text: str
+    predicted_intent: str
+    correct_intent: str
 
 # --- Global Variables (loaded on startup) ---
 models = {}
@@ -33,6 +41,24 @@ def load_models():
     
     print("All models loaded successfully!")
 
+# --- Helper Functions for Sentiment & Prioritization ---
+def get_sentiment(text):
+    angry_words = ["unacceptable", "terrible", "worst", "angry", "frustrated", "ridiculous", "hate", "useless", "furious", "scam"]
+    text_lower = text.lower()
+    for word in angry_words:
+        if word in text_lower:
+            return "High Frustration"
+    return "Neutral"
+
+def calculate_priority(intent, sentiment, workload=0.5):
+    urgent_intents = ["payment_issue", "cancel_order", "complaint", "contact_human_agent"]
+    urgency_score = 0.8 if intent in urgent_intents else 0.4
+    sentiment_score = 0.9 if sentiment == "High Frustration" else 0.2
+    
+    # Formula: (Urgency * 0.4) + (Sentiment * 0.4) + (Workload * 0.2)
+    priority_score = (urgency_score * 0.4) + (sentiment_score * 0.4) + (workload * 0.2)
+    return round(priority_score, 2)
+
 # --- Endpoints ---
 
 @app.post("/classify/baseline")
@@ -42,10 +68,16 @@ def classify_baseline(ticket: TicketRequest):
     pred = clf.predict(vec)[0]
     proba = clf.predict_proba(vec).max()
     
+    # New: Calculate sentiment and priority
+    sentiment = get_sentiment(ticket.text)
+    priority = calculate_priority(pred, sentiment)
+    
     return {
         "model": "Baseline (TF-IDF + LogReg)",
         "predicted_intent": pred,
         "confidence": float(proba),
+        "sentiment": sentiment,
+        "dynamic_priority_score": priority,
         "needs_human_review": bool(proba < 0.7)
     }
 
@@ -61,8 +93,6 @@ def classify_distilbert(ticket: TicketRequest):
     probas = torch.softmax(logits, dim=-1)
     confidence, predicted_idx = torch.max(probas, dim=-1)
     
-    # The label mapping from your training (You can save/load this properly later)
-    # For now, we just return the ID.
     return {
         "model": "DistilBERT",
         "predicted_class_id": predicted_idx.item(),
@@ -78,25 +108,14 @@ def suggest_response(ticket: TicketRequest):
 
 @app.get("/anomalies")
 def get_anomalies():
-    # Load the latest alerts (in a real app, this would query a DB)
     try:
         df = pd.read_csv("data/processed/anomalies_latest.csv")
         return df.to_dict(orient="records")
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="No anomaly reports found.")
 
-# Add this at the very bottom of src/api/main.py
-import csv
-from datetime import datetime
-
-class FeedbackRequest(BaseModel):
-    ticket_text: str
-    predicted_intent: str
-    correct_intent: str
-
 @app.post("/feedback")
 def submit_feedback(feedback: FeedbackRequest):
-    # In a real app, this saves to a database. We will save to a CSV.
     file_path = "data/processed/human_feedback.csv"
     file_exists = os.path.isfile(file_path)
     
@@ -106,4 +125,4 @@ def submit_feedback(feedback: FeedbackRequest):
             writer.writerow(["timestamp", "ticket_text", "predicted_intent", "correct_intent"])
         writer.writerow([datetime.now(), feedback.ticket_text, feedback.predicted_intent, feedback.correct_intent])
         
-    return {"status": "success", "message": "Feedback saved. Will be used for next retraining."}    
+    return {"status": "success", "message": "Feedback saved. Will be used for next retraining."}
