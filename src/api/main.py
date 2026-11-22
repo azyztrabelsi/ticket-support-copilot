@@ -9,6 +9,7 @@ import re
 from datetime import datetime
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
 from src.rag.generate import RAGGenerator
+from src.api.agents_db import get_best_agent
 
 app = FastAPI(title="Ticket Triage & Copilot API")
 
@@ -67,8 +68,11 @@ def classify_baseline(ticket: TicketRequest):
     clf = models["baseline_clf"]
     pred = clf.predict(vec)[0]
     proba = clf.predict_proba(vec).max()
-    
+
+    best_agent = get_best_agent(pred)
+
     # New: Calculate sentiment and priority
+    agent_workload_pct = float(best_agent["current_workload"].split("/")[0]) / float(best_agent["current_workload"].split("/")[1])
     sentiment = get_sentiment(ticket.text)
     priority = calculate_priority(pred, sentiment)
     
@@ -78,6 +82,7 @@ def classify_baseline(ticket: TicketRequest):
         "confidence": float(proba),
         "sentiment": sentiment,
         "dynamic_priority_score": priority,
+        "recommended_agent": best_agent,
         "needs_human_review": bool(proba < 0.7)
     }
 

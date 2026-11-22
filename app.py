@@ -38,7 +38,14 @@ with col2:
                 rag_data = rag_response.json()
                 
                 st.success("Analysis Complete!")
-                
+
+                # --- AGENT ASSIGNMENT ---
+                if "recommended_agent" in class_data:
+                    agent = class_data["recommended_agent"]
+                    st.markdown(f"**🤖 Recommended Agent:** {agent['agent_name']} (Match: {agent['match_score']*100:.0f}%)")
+                    st.caption(f"Current Workload: {agent['current_workload']}")
+                    st.divider()
+
                 # --- CLASSIFICATION METRICS ---
                 col_a, col_b, col_c = st.columns(3)
                 col_a.info(f"**Intent:** {class_data['predicted_intent']}")
