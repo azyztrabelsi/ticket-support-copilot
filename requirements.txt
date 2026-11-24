@@ -1,11 +1,16 @@
 pandas
 numpy
+pyarrow
 scikit-learn
 transformers
 datasets
 torch
 sentence-transformers
 faiss-cpu
+groq
+streamlit
+requests
+plotly
 chromadb
 hdbscan
 imbalanced-learn
